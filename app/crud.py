@@ -13,12 +13,12 @@ def get_books(db: Session):
 def get_book(db: Session, isbn: str):
     return db.query(Book).filter(Book.isbn == isbn).first()
 
-def create_book(db: Session, isbn: str, title: str, num: int = 0):
+def create_book(db: Session, isbn: str, title: str, num: int = 1):
     if num < 0:
-        raise ValueError("Initial inventory cannot be negative.")
+        raise ValueError("初期在庫数は負の値にできません。")
 
     if get_book(db, isbn):
-        raise ValueError("Book already exists.")
+        raise ValueError("この本はすでに存在します。")
 
     db_book = Book(isbn=isbn, title=title, num=num)
     db.add(db_book)
@@ -34,7 +34,7 @@ def update_book(db: Session, isbn: str, title: str = None, num: int = None):
         db_book.title = title
     if num is not None:
         if num < 0:
-            raise ValueError("Inventory cannot be negative.")
+            raise ValueError("在庫数は負の値にできません。")
         db_book.num = num
     db.commit()
     db.refresh(db_book)
@@ -55,7 +55,7 @@ def get_students(db: Session):
 
 def create_student(db: Session, student_id: str, fullname: str):
     if db.query(Student).filter(Student.student_id == student_id).first():
-        raise ValueError("Student already exists.")
+        raise ValueError("この学生はすでに存在します。")
 
     db_student = Student(student_id=student_id, fullname=fullname)
     db.add(db_student)
@@ -69,13 +69,11 @@ def create_student(db: Session, student_id: str, fullname: str):
 def rent_book(db: Session, student_id: str, isbn: str):
     student = db.query(Student).filter(Student.student_id == student_id).first()
     if not student:
-        raise ValueError("Student not found.")
+        raise ValueError("学生が見つかりません。")
 
     book = db.query(Book).filter(Book.isbn == isbn).first()
     if not book:
-        raise ValueError("Book not found.")
-    if book.num <= 0:
-        raise ValueError("Book is not available for rent.")
+        raise ValueError("本が見つかりません。")
 
     existing_rental: Optional[StudentBook] = (
         db.query(StudentBook)
@@ -87,7 +85,7 @@ def rent_book(db: Session, student_id: str, isbn: str):
         .first()
     )
     if existing_rental:
-        raise ValueError("Student already has an active rental for this book.")
+        raise ValueError("この本はすでに貸出中です。")
 
     rental = StudentBook(
         student_id=student_id,
@@ -113,7 +111,7 @@ def return_book(db: Session, student_id: str, isbn: str):
         .first()
     )
     if not rental:
-        raise ValueError("Active rental record not found.")
+        raise ValueError("有効な貸出記録が見つかりません。")
 
     book = db.query(Book).filter(Book.isbn == isbn).first()
     if book:
